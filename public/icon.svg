@@ -1,0 +1,63 @@
+<svg
+  width="120"
+  height="120"
+  viewBox="0 0 120 120"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- Outer camera lens -->
+  <circle
+    cx="60"
+    cy="60"
+    r="44"
+    stroke="url(#grad)"
+    stroke-width="4"
+  />
+
+  <!-- Inner lens -->
+  <circle
+    cx="60"
+    cy="60"
+    r="26"
+    stroke="url(#grad)"
+    stroke-width="3"
+    opacity="0.8"
+  />
+
+  <!-- Face curve -->
+  <path
+    d="M48 54 C48 44, 72 44, 72 54"
+    stroke="url(#grad)"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+
+  <!-- Chin -->
+  <path
+    d="M52 68 C60 74, 68 74, 68 68"
+    stroke="url(#grad)"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+
+  <!-- Sparkle -->
+  <path
+    d="M82 38 L84 42 L88 44 L84 46 L82 50 L80 46 L76 44 L80 42 Z"
+    fill="url(#grad)"
+  />
+
+  <!-- Gradient -->
+  <defs>
+    <linearGradient
+      id="grad"
+      x1="0"
+      y1="0"
+      x2="120"
+      y2="120"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop stop-color="#00FFD1" />
+      <stop offset="1" stop-color="#00A3FF" />
+    </linearGradient>
+  </defs>
+</svg>

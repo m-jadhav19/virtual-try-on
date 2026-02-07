@@ -1,0 +1,103 @@
+{
+  "categories": [
+    {
+      "id": "glasses",
+      "name": "Glasses",
+      "icon": "👓",
+      "glowColor": "#7C7CFF",
+      "products": [
+        {
+          "id": "glasses1",
+          "name": "Classic Fit",
+          "modelPath": "/webar/assets/glasses/models3D/glasses1.glb",
+          "occluderPath": "/webar/assets/glasses/models3D/occluder.glb",
+          "envmapPath": "/webar/assets/glasses/envmaps/venice_sunset_1k.hdr",
+          "thumbnail": ""
+        }
+      ]
+    },
+    {
+      "id": "earrings",
+      "name": "Earrings",
+      "icon": "👂",
+      "glowColor": "#FF6FAE",
+      "products": [
+        {
+          "id": "earrings-simple",
+          "name": "Gold Hoops",
+          "modelPath": "/webar/assets/earrings/earringsSimple.glb",
+          "envmapPath": "/webar/assets/earrings/venice_sunset_512.hdr",
+          "thumbnail": ""
+        }
+      ]
+    },
+    {
+      "id": "necklace",
+      "name": "Necklace",
+      "icon": "📿",
+      "glowColor": "#32E6E2",
+      "products": [
+        {
+          "id": "black-panther",
+          "name": "Black Panther",
+          "modelPath": "/webar/assets/necklace/models3D/blackPanther.glb",
+          "occluderPath": "/webar/assets/necklace/models3D/occluder.glb",
+          "envmapPath": "/webar/assets/necklace/envmaps/venice_sunset_1k.hdr",
+          "thumbnail": ""
+        }
+      ]
+    },
+    {
+      "id": "ring",
+      "name": "Ring",
+      "icon": "💍",
+      "glowColor": "#FFD166",
+      "products": [
+        {
+          "id": "ring-placeholder2",
+          "name": "Silver Diamond",
+          "modelPath": "/webar/assets/ring/ringPlaceHolder2.glb",
+          "occluderPath": "/webar/assets/ring/ringOccluder2.glb",
+          "thumbnail": "",
+          "modelScale": 0.421,
+          "modelOffset": [-1.66, -11.91, 0.26],
+          "modelQuaternion": [0.258, 0.016, -0.005, 0.966]
+        }
+      ]
+    },
+    {
+      "id": "watch",
+      "name": "Watch",
+      "icon": "⌚",
+      "glowColor": "#5DA9FF",
+      "products": [
+        {
+          "id": "watch-casio",
+          "name": "Digital Casio",
+          "modelPath": "/webar/assets/watch/watchCasio.glb",
+          "occluderPath": "/webar/assets/watch/wristOccluder.glb",
+          "thumbnail": "",
+          "modelScale": 1.9737,
+          "modelOffset": [0.076, -0.916, -0.504],
+          "modelQuaternion": [0, 0, 0, 1]
+        }
+      ]
+    },
+    {
+      "id": "hat",
+      "name": "Hat",
+      "icon": "🎩",
+      "glowColor": "#9BFF7A",
+      "products": [
+        {
+          "id": "hat-draco",
+          "name": "Classic Cap",
+          "modelPath": "/webar/assets/hat/models3D/hatDraco.glb",
+          "occluderPath": "/webar/assets/hat/models3D/occluder.glb",
+          "envmapPath": "/webar/assets/hat/envmaps/venice_sunset_512.hdr",
+          "thumbnail": ""
+        }
+      ]
+    }
+  ]
+}

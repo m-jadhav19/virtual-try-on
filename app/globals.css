@@ -1,26 +1,152 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   VTO DESIGN SYSTEM — Modern · Fun · Camera-First
+   Dark by default. Camera feed stays neutral. Accents guide interaction.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base neutrals — never compete with camera */
+  --vto-bg-primary: #0B0D12;
+  --vto-bg-secondary: #121622;
+  --vto-bg-glass: rgba(18, 22, 34, 0.65);
+  --vto-border-soft: rgba(255, 255, 255, 0.08);
+  --vto-shadow-soft: rgba(0, 0, 0, 0.35);
+
+  /* Primary accent — Aurora Violet */
+  --vto-accent-primary: #7C7CFF;
+  --vto-accent-primary-hover: #8F8FFF;
+  --vto-accent-primary-pressed: #6A6AE0;
+  --vto-glow-primary: rgba(124, 124, 255, 0.35);
+
+  /* Secondary accent — Electric Cyan */
+  --vto-accent-secondary: #32E6E2;
+  --vto-accent-secondary-hover: #4FF0EC;
+  --vto-glow-cyan: rgba(50, 230, 226, 0.35);
+
+  /* Tertiary — Rose Pop (save, like) */
+  --vto-accent-rose: #FF6FAE;
+  --vto-accent-rose-hover: #FF86BC;
+  --vto-glow-rose: rgba(255, 111, 174, 0.35);
+
+  /* Status */
+  --vto-status-success: #3FE28C;
+  --vto-status-warning: #FFB547;
+  --vto-status-error: #FF5C5C;
+  --vto-status-info: #5DA9FF;
+
+  /* Motion */
+  --vto-motion-fast: 120ms;
+  --vto-motion-base: 180ms;
+  --vto-motion-slow: 280ms;
+  --vto-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --vto-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --vto-ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* Glow levels */
+  --vto-glow-1: 0 0 12px;
+  --vto-glow-2: 0 0 18px;
+  --vto-glow-3: 0 0 24px;
+
+  /* Shadcn-compatible mapping (dark-first) */
+  --background: var(--vto-bg-primary);
+  --foreground: rgba(255, 255, 255, 0.92);
+  --card: var(--vto-bg-secondary);
+  --card-foreground: rgba(255, 255, 255, 0.92);
+  --popover: var(--vto-bg-glass);
+  --popover-foreground: rgba(255, 255, 255, 0.92);
+  --primary: var(--vto-accent-primary);
+  --primary-foreground: #0B0D12;
+  --secondary: var(--vto-bg-secondary);
+  --secondary-foreground: var(--vto-accent-secondary);
+  --muted: rgba(255, 255, 255, 0.08);
+  --muted-foreground: rgba(255, 255, 255, 0.5);
+  --accent: rgba(255, 255, 255, 0.06);
+  --accent-foreground: rgba(255, 255, 255, 0.9);
+  --destructive: var(--vto-status-error);
+  --destructive-foreground: #fff;
+  --border: var(--vto-border-soft);
+  --input: var(--vto-border-soft);
+  --input-background: rgba(255, 255, 255, 0.04);
+  --ring: var(--vto-accent-primary);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLASSMORPHISM PRESET
+   ═══════════════════════════════════════════════════════════════════════════ */
+.vto-glass {
+  background: var(--vto-bg-glass);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--vto-border-soft);
+  box-shadow: 0 10px 30px var(--vto-shadow-soft);
+  border-radius: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOTION UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.motion-fast {
+  transition-duration: var(--vto-motion-fast);
+  transition-timing-function: var(--vto-ease-standard);
+}
+.motion-base {
+  transition-duration: var(--vto-motion-base);
+  transition-timing-function: var(--vto-ease-standard);
+}
+.motion-slow {
+  transition-duration: var(--vto-motion-slow);
+  transition-timing-function: var(--vto-ease-out);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOW UTILITIES (hover / active / focus only — no infinite glow)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.glow-primary {
+  box-shadow: 0 0 0 1px rgba(124, 124, 255, 0.4), var(--vto-glow-3) var(--vto-glow-primary);
+}
+.glow-primary-1:hover {
+  box-shadow: 0 0 0 1px rgba(124, 124, 255, 0.3), var(--vto-glow-1) rgba(124, 124, 255, 0.22);
+}
+.glow-cyan {
+  box-shadow: 0 0 0 1px rgba(50, 230, 226, 0.4), var(--vto-glow-2) var(--vto-glow-cyan);
+}
+.glow-rose {
+  box-shadow: 0 0 0 1px rgba(255, 111, 174, 0.4), var(--vto-glow-2) var(--vto-glow-rose);
+}
+.glow-success {
+  box-shadow: var(--vto-glow-1) rgba(63, 226, 140, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE
+   ═══════════════════════════════════════════════════════════════════════════ */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-top { padding-top: env(safe-area-inset-top); }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Capture moment — soft white flash (60ms) */
+@keyframes vto-capture-flash {
+  0% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+.vto-capture-flash {
+  animation: vto-capture-flash 280ms var(--vto-ease-out) forwards;
 }
