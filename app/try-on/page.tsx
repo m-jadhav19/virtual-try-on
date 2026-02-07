@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function TryOnRedirect() {
+function TryOnRedirectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -17,5 +17,13 @@ export default function TryOnRedirect() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <p className="text-gray-500">Redirecting…</p>
     </div>
+  );
+}
+
+export default function TryOnRedirect() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><p className="text-gray-500">Redirecting…</p></div>}>
+      <TryOnRedirectContent />
+    </Suspense>
   );
 }

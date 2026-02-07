@@ -3,15 +3,15 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import TryOnCanvas, { type TryOnCanvasHandle, type TrackingStatus } from './TryOnCanvas';
 import ScriptLoader from './ScriptLoader';
-import MinimalTopBar from './UI/MinimalTopBar';
-import TypeCarousel, { TYPES, type Category } from './UI/TypeCarousel';
-import PositioningGuides, { type GuideType } from './UI/PositioningGuides';
-import ProductTray, { type Product } from './UI/ProductTray';
-import CameraCaptureButton from './UI/CameraCaptureButton';
-import CaptureSheet from './UI/CaptureSheet';
+import MinimalTopBar from './ui/MinimalTopBar';
+import TypeCarousel, { TYPES, type Category } from './ui/TypeCarousel';
+import PositioningGuides, { type GuideType } from './ui/PositioningGuides';
+import ProductTray, { type Product } from './ui/ProductTray';
+import CameraCaptureButton from './ui/CameraCaptureButton';
+import CaptureSheet from './ui/CaptureSheet';
 import AdaptiveProduct from './AdaptiveProduct';
-import FeedbackToast from './UI/FeedbackToast';
-import AdjustmentPanel from './UI/AdjustmentPanel';
+import FeedbackToast from './ui/FeedbackToast';
+import AdjustmentPanel from './ui/AdjustmentPanel';
 import { useAmbientLight } from './AmbientLightDetector';
 
 // Mock products

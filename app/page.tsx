@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -57,7 +57,7 @@ function productToModelConfig(p: VtoProduct) {
   };
 }
 
-export default function TryOnPage() {
+function TryOnPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") as CategoryType | null;
@@ -512,5 +512,21 @@ export default function TryOnPage() {
         <AnimatePresence>{showGestureHints && <GestureHints onDismiss={handleDismissGestures} />}</AnimatePresence>
       </div>
     </>
+  );
+}
+
+function PageFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+      <p className="text-muted-foreground">Loading…</p>
+    </div>
+  );
+}
+
+export default function TryOnPage() {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <TryOnPageContent />
+    </Suspense>
   );
 }
