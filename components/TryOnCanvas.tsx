@@ -598,6 +598,9 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
 
         updateStatus('loading', 'Loading scripts…');
         // Wait for scripts
+        if ((window as any).__webarScriptsReady === false) {
+          throw new Error("Scripts failed to load. Check browser console for details.");
+        }
         await waitFor(() => (window as any).__webarScriptsReady === true, "ScriptLoader Ready");
 
         if (!isMounted) return;
@@ -641,8 +644,8 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
         }
       });
     };
-  // Intentionally exclude modelConfig?.modelPath: changing product (same category) must not
-  // tear down and re-init the camera, which would cause a visible reset/flicker.
+    // Intentionally exclude modelConfig?.modelPath: changing product (same category) must not
+    // tear down and re-init the camera, which would cause a visible reset/flicker.
   }, [category, cameraMode, isHandMode, onError]);
 
   // Apply transform overrides to hand model every frame so they persist over SDK updates

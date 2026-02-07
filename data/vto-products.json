@@ -28,6 +28,20 @@
           "modelPath": "/webar/assets/earrings/earringsSimple.glb",
           "envmapPath": "/webar/assets/earrings/venice_sunset_512.hdr",
           "thumbnail": ""
+        },
+        {
+          "id": "earring-pearl",
+          "name": "Pearl Earring",
+          "modelPath": "/webar/assets/earrings/earring.glb",
+          "envmapPath": "/webar/assets/earrings/venice_sunset_512.hdr",
+          "thumbnail": ""
+        },
+        {
+          "id": "earring-louboutin",
+          "name": "Louboutin Earring",
+          "modelPath": "/webar/assets/earrings/louboutin_earring.glb",
+          "envmapPath": "/webar/assets/earrings/venice_sunset_512.hdr",
+          "thumbnail": ""
         }
       ]
     },
@@ -41,6 +55,14 @@
           "id": "black-panther",
           "name": "Black Panther",
           "modelPath": "/webar/assets/necklace/models3D/blackPanther.glb",
+          "occluderPath": "/webar/assets/necklace/models3D/occluder.glb",
+          "envmapPath": "/webar/assets/necklace/envmaps/venice_sunset_1k.hdr",
+          "thumbnail": ""
+        },
+        {
+          "id": "necklace-egyptian",
+          "name": "Egyptian Necklace",
+          "modelPath": "/webar/assets/necklace/models3D/egyptian_necklace.glb",
           "occluderPath": "/webar/assets/necklace/models3D/occluder.glb",
           "envmapPath": "/webar/assets/necklace/envmaps/venice_sunset_1k.hdr",
           "thumbnail": ""
@@ -79,6 +101,26 @@
           "thumbnail": "",
           "modelScale": 1.9737,
           "modelOffset": [0.076, -0.916, -0.504],
+          "modelQuaternion": [0, 0, 0, 1]
+        },
+        {
+          "id": "watch-bamboo",
+          "name": "Bamboo Watch",
+          "modelPath": "/webar/assets/watch/bamboo_watch.glb",
+          "occluderPath": "/webar/assets/watch/wristOccluder.glb",
+          "thumbnail": "",
+          "modelScale": 1.9737,
+          "modelOffset": [0, 0, 0],
+          "modelQuaternion": [0, 0, 0, 1]
+        },
+        {
+          "id": "watch-richard-mille",
+          "name": "Richard Mille RM011",
+          "modelPath": "/webar/assets/watch/richard_mille_rm011_low_poly.glb",
+          "occluderPath": "/webar/assets/watch/wristOccluder.glb",
+          "thumbnail": "",
+          "modelScale": 1.9737,
+          "modelOffset": [0, 0, 0],
           "modelQuaternion": [0, 0, 0, 1]
         }
       ]

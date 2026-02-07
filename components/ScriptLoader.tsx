@@ -32,11 +32,14 @@ export default function ScriptLoader() {
 
     (async () => {
       try {
+        console.log('WebAR: Starting script loading...');
         // THREE + loaders:
         await loadScript('/webar/libs/three/v136/build/three.min.js');
+        console.log('WebAR: Three.js loaded');
         await loadScript('/webar/libs/three/v136/examples/js/loaders/GLTFLoader.js');
         await loadScript('/webar/libs/three/v136/examples/js/loaders/RGBELoader.js');
         await loadScript('/webar/libs/three/v136/examples/js/loaders/DRACOLoader.js');
+        console.log('WebAR: Three.js loaders loaded');
 
         // Postprocessing (used by helpers for TAA/bloom):
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/EffectComposer.js');
@@ -47,27 +50,32 @@ export default function ScriptLoader() {
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/UnrealBloomPassTweaked.js');
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/SSAARenderPass.js');
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/TAARenderPass.js');
+        console.log('WebAR: Three.js postprocessing loaded');
 
         // Common helpers:
         await loadScript('/webar/helpers/landmarksStabilizers/OneEuroLMStabilizer.js');
         await loadScript('/webar/helpers/WebARRocksResizer.js');
+        console.log('WebAR: Common helpers loaded');
 
         // Face SDK + helpers:
         await loadScript('/webar/dist/WebARRocksFace.js');
         await loadScript('/webar/helpers/WebARRocksFaceThreeHelper.js');
         await loadScript('/webar/helpers/WebARRocksMirror.js');
         await loadScript('/webar/helpers/WebARRocksFaceEarrings3DHelper.js');
+        console.log('WebAR: Face SDK loaded');
 
         // Hand SDK + helpers:
         await loadScript('/webar/dist/WebARRocksHand.js');
         await loadScript('/webar/helpers/PoseFlipFilter.js');
         await loadScript('/webar/helpers/HandTrackerThreeHelper.js');
+        console.log('WebAR: Hand SDK loaded');
 
         // Mark ready:
         (window as any).__webarScriptsReady = true;
+        console.log('WebAR: All scripts loaded successfully');
         if (isMounted) setReady(true);
       } catch (e) {
-        console.error(e);
+        console.error('WebAR script loading failed:', e);
         (window as any).__webarScriptsReady = false;
       }
     })();

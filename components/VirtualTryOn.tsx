@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import TryOnCanvas, { type TryOnCanvasHandle, type TrackingStatus } from './TryOnCanvas';
 import ScriptLoader from './ScriptLoader';
 import MinimalTopBar from './ui/MinimalTopBar';
-import TypeCarousel, { TYPES, type Category } from './ui/TypeCarousel';
+import TypeCarousel, { TYPES } from './ui/TypeCarousel';
 import PositioningGuides, { type GuideType } from './ui/PositioningGuides';
 import ProductTray, { type Product } from './ui/ProductTray';
 import CameraCaptureButton from './ui/CameraCaptureButton';
@@ -13,35 +13,12 @@ import AdaptiveProduct from './AdaptiveProduct';
 import FeedbackToast from './ui/FeedbackToast';
 import AdjustmentPanel from './ui/AdjustmentPanel';
 import { useAmbientLight } from './AmbientLightDetector';
+import { vtoCategories, type CategoryId, type VtoProduct, getVtoCategoryById } from '@/data/vto-products';
 
-// Mock products
-const MOCK_PRODUCTS: Record<Category, Product[]> = {
-  glasses: [
-    { id: 'g1', name: 'Classic Black', thumbnail: 'https://via.placeholder.com/72?text=G1' },
-    { id: 'g2', name: 'Aviator Gold', thumbnail: 'https://via.placeholder.com/72?text=G2' },
-    { id: 'g3', name: 'Round Vintage', thumbnail: 'https://via.placeholder.com/72?text=G3' },
-  ],
-  earrings: [
-    { id: 'e1', name: 'Pearl Studs', thumbnail: 'https://via.placeholder.com/72?text=E1' },
-    { id: 'e2', name: 'Gold Hoops', thumbnail: 'https://via.placeholder.com/72?text=E2' },
-  ],
-  necklace: [
-    { id: 'n1', name: 'Silver Chain', thumbnail: 'https://via.placeholder.com/72?text=N1' },
-    { id: 'n2', name: 'Pearl Necklace', thumbnail: 'https://via.placeholder.com/72?text=N2' },
-  ],
-  ring: [
-    { id: 'r1', name: 'Diamond Ring', thumbnail: 'https://via.placeholder.com/72?text=R1' },
-    { id: 'r2', name: 'Gold Band', thumbnail: 'https://via.placeholder.com/72?text=R2' },
-  ],
-  watch: [
-    { id: 'w1', name: 'Classic Watch', thumbnail: 'https://via.placeholder.com/72?text=W1' },
-    { id: 'w2', name: 'Sport Watch', thumbnail: 'https://via.placeholder.com/72?text=W2' },
-  ],
-  hat: [
-    { id: 'h1', name: 'Fedora', thumbnail: 'https://via.placeholder.com/72?text=H1' },
-    { id: 'h2', name: 'Baseball Cap', thumbnail: 'https://via.placeholder.com/72?text=H2' },
-  ],
-};
+// Mapping CategoryId to the Category type used in TypeCarousel
+export type Category = CategoryId;
+
+// Camera framing transforms per type
 
 // Camera framing transforms per type
 const CAMERA_TRANSFORMS: Record<Category, string> = {
@@ -66,7 +43,10 @@ const GUIDE_TYPES: Record<Category, GuideType> = {
 export default function VirtualTryOn() {
   // Core state
   const [activeType, setActiveType] = useState<Category>('glasses');
-  const [activeProductId, setActiveProductId] = useState('g1');
+  const [activeProductId, setActiveProductId] = useState(() => {
+    const cat = getVtoCategoryById('glasses');
+    return cat?.products[0]?.id || '';
+  });
   const [status, setStatus] = useState<TrackingStatus>('loading');
   const [statusText, setStatusText] = useState('Initializing...');
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -91,7 +71,17 @@ export default function VirtualTryOn() {
   const ambientLight = useAmbientLight(videoElement, 500);
 
   // Get current products
-  const currentProducts = MOCK_PRODUCTS[activeType];
+  const currentCategory = useMemo(() => getVtoCategoryById(activeType), [activeType]);
+  const vtoProducts = useMemo(() => currentCategory?.products || [], [currentCategory]);
+
+  // Map to UI-friendly product type (ensuring thumbnail is a string)
+  const currentProducts = useMemo(() => vtoProducts.map(p => ({
+    id: p.id,
+    name: p.name,
+    thumbnail: p.thumbnail || ''
+  })), [vtoProducts]);
+
+  const activeProduct = useMemo(() => vtoProducts.find(p => p.id === activeProductId), [vtoProducts, activeProductId]);
 
   // Capture video element
   useEffect(() => {
@@ -139,7 +129,13 @@ export default function VirtualTryOn() {
 
     setIsTransitioning(true);
     setActiveType(newType);
-    setActiveProductId(MOCK_PRODUCTS[newType][0].id);
+
+    // Set initial product for new type
+    const cat = getVtoCategoryById(newType);
+    if (cat && cat.products.length > 0) {
+      setActiveProductId(cat.products[0].id);
+    }
+
     setIsLocked(false);
     setShowGuides(true);
 
@@ -235,6 +231,7 @@ export default function VirtualTryOn() {
             category={activeType}
             onStatusChange={handleStatusChange}
             onError={handleError}
+            modelConfig={activeProduct}
           />
         </div>
 
