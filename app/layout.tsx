@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Virtual Try-On",
+  title: "AuraTry",
   description: "Try on necklaces, earrings, glasses, hats, rings, and watches with your camera.",
   icons: {
     icon: [
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Virtual Try-On',
+    title: 'AuraTry',
   },
 };
 

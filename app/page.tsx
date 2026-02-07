@@ -221,7 +221,7 @@ export default function TryOnPage() {
         if (navigator.share && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: "My Virtual Try-On",
+            title: "AuraTry",
             text: `Check out how I look with this ${getCategoryById(selectedCategory)?.name}!`,
           });
         } else {

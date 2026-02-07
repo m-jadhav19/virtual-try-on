@@ -1,6 +1,6 @@
 {
-  "name": "Virtual Try-On",
-  "short_name": "VTO",
+  "name": "AuraTry",
+  "short_name": "AuraTry",
   "description": "Premium AR virtual try-on experience for fashion accessories",
   "start_url": "/",
   "display": "standalone",

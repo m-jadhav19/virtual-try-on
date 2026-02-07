@@ -170,7 +170,7 @@ export default function VirtualTryOn() {
     if (capturedImage) {
       const link = document.createElement('a');
       link.href = capturedImage;
-      link.download = `virtual-try-on-${Date.now()}.png`;
+      link.download = `aura-try-${Date.now()}.png`;
       link.click();
     }
     setShowCaptureSheet(false);
@@ -181,8 +181,8 @@ export default function VirtualTryOn() {
       try {
         const response = await fetch(capturedImage);
         const blob = await response.blob();
-        const file = new File([blob], 'virtual-try-on.png', { type: 'image/png' });
-        await navigator.share({ files: [file], title: 'Virtual Try-On' });
+        const file = new File([blob], 'aura-try.png', { type: 'image/png' });
+        await navigator.share({ files: [file], title: 'AuraTry' });
       } catch (err) {
         console.error('Share failed:', err);
       }
