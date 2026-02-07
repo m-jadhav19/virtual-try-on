@@ -221,6 +221,11 @@ const WebARRocksLMStabilizer = (function(){
 })();
 
 
+// Assign to window for browser usage:
+if (typeof window !== 'undefined') {
+  window.WebARRocksLMStabilizer = WebARRocksLMStabilizer;
+}
+
 // Export ES6 module:
 try {
   module.exports = WebARRocksLMStabilizer;

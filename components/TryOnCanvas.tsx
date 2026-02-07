@@ -419,19 +419,32 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           });
 
         const earringsModel = modelConfig?.modelPath ?? '/webar/assets/earrings/earringsSimple.glb';
-        const loader = new window.THREE.GLTFLoader();
-        loader.load(earringsModel, (gltf: any) => {
-          const model = gltf.scene;
-          model.scale.multiplyScalar(100);
-          model.traverse((child: any) => {
-            if (child.isMesh) {
-              child.material.roughness = 0.0;
-              child.material.metalness = 1.0;
-            }
-          });
-          three.earringRight.add(model);
-          three.earringLeft.add(model.clone());
-        });
+        const dracoLoader = new (window as any).THREE.DRACOLoader();
+        dracoLoader.setDecoderPath('/webar/libs/three/v136/examples/js/libs/draco/');
+        const loader = new (window as any).THREE.GLTFLoader();
+        loader.setDRACOLoader(dracoLoader);
+
+        loader.load(
+          earringsModel,
+          (gltf: any) => {
+            const model = gltf.scene;
+            model.scale.multiplyScalar(100);
+            model.traverse((child: any) => {
+              if (child.isMesh) {
+                child.material.roughness = 0.0;
+                child.material.metalness = 1.0;
+              }
+            });
+            three.earringRight.add(model);
+            three.earringLeft.add(model.clone());
+            console.log('WebAR: Loaded earring model:', earringsModel);
+          },
+          undefined,
+          (err: any) => {
+            console.error('WebAR: Failed to load earring model:', earringsModel, err);
+            onError?.(new Error(`Failed to load model: ${earringsModel}`));
+          }
+        );
 
         const cylinderRadius = 2;
         const cylinderHeight = 0.5;
@@ -537,37 +550,50 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
         pointLight.position.set(0, 100, 0);
         scene.add(pointLight);
 
+        const dracoLoader = new (window as any).THREE.DRACOLoader();
+        dracoLoader.setDecoderPath('/webar/libs/three/v136/examples/js/libs/draco/');
+        const gltfLoader = new (window as any).THREE.GLTFLoader();
+        gltfLoader.setDRACOLoader(dracoLoader);
+
         if (occluderURL) {
-          new window.THREE.GLTFLoader().load(occluderURL, (model: any) => {
-            const me = model.scene.children[0];
-            me.material = new window.THREE.MeshNormalMaterial({ colorWrite: false });
-            window.HandTrackerThreeHelper.add_threeOccluder(me);
-          });
+          gltfLoader.load(
+            occluderURL,
+            (model: any) => {
+              const me = model.scene.children[0];
+              me.material = new window.THREE.MeshNormalMaterial({ colorWrite: false });
+              window.HandTrackerThreeHelper.add_threeOccluder(me);
+              console.log('WebAR: Loaded hand occluder:', occluderURL);
+            },
+            undefined,
+            (err: any) => console.error('WebAR: Failed to load hand occluder:', occluderURL, err)
+          );
         }
 
-        new window.THREE.GLTFLoader().load(modelURL, (model: any) => {
-          const me = model.scene.children[0];
-          me.scale.set(1, 1, 1).multiplyScalar(modelScale);
-          const d = modelOffset;
-          const displacement = new window.THREE.Vector3(d[0], d[2], -d[1]);
-          me.position.add(displacement);
-          const q = modelQuaternion;
-          me.quaternion.set(q[0], q[2], -q[1], q[3]);
-
-          handModelRef.current = {
-            mesh: me,
-            baseScale: modelScale,
-            basePosition: [me.position.x, me.position.y, me.position.z],
-            baseQuaternion: [me.quaternion.x, me.quaternion.y, me.quaternion.z, me.quaternion.w],
-          };
-          window.HandTrackerThreeHelper.add_threeObject(me);
-          if (isMounted) {
-            setIsLoaded(true);
-            setIsPaused(false);
-            updateStatus('tracking', 'Tracking Hand');
+        gltfLoader.load(
+          modelURL,
+          (model: any) => {
+            const me = model.scene.children[0];
+            handModelRef.current = {
+              mesh: me,
+              baseScale: modelScale,
+              basePosition: [me.position.x, me.position.y, me.position.z],
+              baseQuaternion: [me.quaternion.x, me.quaternion.y, me.quaternion.z, me.quaternion.w],
+            };
+            window.HandTrackerThreeHelper.add_threeObject(me);
+            console.log('WebAR: Loaded hand model:', modelURL);
+          },
+          undefined,
+          (err: any) => {
+            console.error('WebAR: Failed to load hand model:', modelURL, err);
+            onError?.(new Error(`Failed to load model: ${modelURL}`));
           }
-        });
+        );
 
+        if (isMounted) {
+          setIsLoaded(true);
+          setIsPaused(false);
+          updateStatus('tracking', category === 'ring' ? 'Tracking Ring' : 'Tracking Watch');
+        }
       } catch (e: any) {
         if (isMounted) {
           onError?.(e);
@@ -576,33 +602,21 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
       }
     };
 
-    // QUEUEING SYSTEM
-    // We assume `globalSequence` would be defined at module scope, but to ensure hot-reload safety, 
-    // we attach it to window or use a mutable ref if this was a singleton. 
-    // Since this component re-renders, we need a true global.
-    // We will use a window property or just a let outside the component (in the module).
-
+    // QUEUEING SYSTEM: Simple queue: always wait for previous promise
     const enqueue = (task: () => Promise<void>) => {
-      // Simple queue: always wait for previous promise
       globalSequence = globalSequence.then(task).catch(e => console.error("Queue error:", e));
     };
 
-    // Main start logic
+    // Main start logic execution
     enqueue(async () => {
-      if (!isMounted) return; // if unmounted before we even started, abort
-
+      if (!isMounted) return;
       try {
         updateStatus('loading', 'Initializing...');
-
-        // NOTE: We do NOT need to wait for destroy here because the queue guarantees `destroy` (from previous effect) finished!
-
-        updateStatus('loading', 'Loading scripts…');
         // Wait for scripts
         if ((window as any).__webarScriptsReady === false) {
           throw new Error("Scripts failed to load. Check browser console for details.");
         }
         await waitFor(() => (window as any).__webarScriptsReady === true, "ScriptLoader Ready");
-
         if (!isMounted) return;
 
         // Globals Check
