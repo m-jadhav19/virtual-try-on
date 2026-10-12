@@ -31,7 +31,9 @@
 				uniforms: this.copyUniforms,
 				vertexShader: copyShader.vertexShader,
 				fragmentShader: copyShader.fragmentShader,
-				premultipliedAlpha: true,
+				// Straight alpha. Premultiply here darkens every edge of the
+				// transparent try-on overlay (glasses rims, earring wires).
+				premultipliedAlpha: false,
 				transparent: true,
 				blending: THREE.AdditiveBlending,
 				depthTest: false,
@@ -65,7 +67,8 @@
 				this.sampleRenderTarget = new THREE.WebGLRenderTarget( readBuffer.width, readBuffer.height, {
 					minFilter: THREE.LinearFilter,
 					magFilter: THREE.LinearFilter,
-					format: THREE.RGBAFormat
+					format: THREE.RGBAFormat,
+					encoding: THREE.sRGBEncoding
 				} );
 				this.sampleRenderTarget.texture.name = 'SSAARenderPass.sample';
 

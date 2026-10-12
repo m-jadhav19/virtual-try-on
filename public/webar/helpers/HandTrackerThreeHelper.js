@@ -36,6 +36,7 @@ const HandTrackerThreeHelper = (function(){
     poseFilter: null,
     isPostProcessing: false,
     taaLevel: 0,
+    bloom: null,
 
     poseLandmarksLabels: ["wristBack", "wristLeft", "wristRight", "wristPalm", "wristPalmTop", "wristBackTop"],
     poseRotationDirectionSrc: null,
@@ -203,9 +204,13 @@ const HandTrackerThreeHelper = (function(){
       canvas: _spec.VTOCanvas,
       alpha: true,
       antialias: true,
+      premultipliedAlpha: false,
       preserveDrawingBuffer: true
     });
-    _three.renderer.setClearAlpha(0);
+    _three.renderer.outputEncoding = THREE.sRGBEncoding;
+    _three.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    _three.renderer.toneMappingExposure = 1.05;
+    _three.renderer.setClearColor(0x000000, 0);
 
     // Fix a weird issue with IOS15.3 and 15.4:
     if (check_isAppleCrap()){
@@ -275,6 +280,13 @@ const HandTrackerThreeHelper = (function(){
       renderScenePass.enabled = false;
       const copyPass = new THREE.ShaderPass( THREE.CopyShader );
       _three.composer.addPass( copyPass );
+    }
+
+    if (_spec.bloom){
+      const canvas = _spec.VTOCanvas;
+      const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(canvas.width, canvas.height),
+        _spec.bloom.strength, _spec.bloom.radius, _spec.bloom.threshold);
+      _three.composer.addPass(bloomPass);
     }
   }
 
@@ -639,7 +651,7 @@ const HandTrackerThreeHelper = (function(){
       _landmarksStabilizers = init_landmarksStabilizers(_spec.landmarksStabilizerSpec);
 
       // enable post processing if temporal anti-aliasing:
-      _spec.isPostProcessing = _spec.isPostProcessing || (_spec.taaLevel > 0);
+      _spec.isPostProcessing = _spec.isPostProcessing || (_spec.taaLevel > 0) || !!_spec.bloom;
 
       return new Promise(function(accept, reject){
         WEBARROCKSHAND.init({

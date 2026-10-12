@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useImperativeHandle, forwardRef } from "react";
-import TryOnCanvas, { type TryOnCanvasHandle, type Category, type ModelConfig } from "./TryOnCanvas";
+import TryOnCanvas, { type TryOnCanvasHandle, type Category, type ModelConfig, type TrackingStatus } from "./TryOnCanvas";
 import ScriptLoader from "./ScriptLoader";
 
 export interface CameraViewControls {
@@ -17,14 +17,16 @@ interface CameraViewProps {
   controls?: CameraViewControls;
   /** Selected product from vto-products (model paths + hand overrides) */
   modelConfig?: ModelConfig | null;
+  onStatusChange?: (status: TrackingStatus, text: string) => void;
 }
 
 export type CameraViewHandle = {
   capture: () => Promise<string | void>;
+  flipCamera: () => Promise<void>;
 };
 
 export const CameraView = forwardRef<CameraViewHandle, CameraViewProps>(
-  function CameraView({ onCapture, activeCategory = "glasses", controls, modelConfig }, ref) {
+  function CameraView({ onCapture, activeCategory = "glasses", controls, modelConfig, onStatusChange }, ref) {
     const canvasRef = useRef<TryOnCanvasHandle | null>(null);
 
     // Expose capture method via ref
@@ -37,6 +39,9 @@ export const CameraView = forwardRef<CameraViewHandle, CameraViewProps>(
           }
           return imageData;
         }
+      },
+      flipCamera: async () => {
+        await canvasRef.current?.flipCamera();
       },
     }), [onCapture]);
 
@@ -57,20 +62,16 @@ export const CameraView = forwardRef<CameraViewHandle, CameraViewProps>(
     }, [onCapture]);
 
     return (
-      <div className="relative w-full h-full bg-black rounded-xl overflow-hidden">
+      <div className="absolute inset-0 bg-black">
         <ScriptLoader />
-        <div className="w-full h-full">
-          <TryOnCanvas
-            ref={canvasRef}
-            category={activeCategory}
-            transformOverrides={controls}
-            modelConfig={modelConfig}
-            onError={(e) => console.error("TryOnCanvas error:", e)}
-            onStatusChange={(status, text) => {
-              console.log("Status:", status, text);
-            }}
-          />
-        </div>
+        <TryOnCanvas
+          ref={canvasRef}
+          category={activeCategory}
+          transformOverrides={controls}
+          modelConfig={modelConfig}
+          onError={(e) => console.error("TryOnCanvas error:", e)}
+          onStatusChange={onStatusChange}
+        />
       </div>
     );
   }

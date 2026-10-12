@@ -10,21 +10,25 @@ export default function ScriptLoader() {
 
     const loadScript = (src: string) =>
       new Promise<void>((resolve, reject) => {
-        // already loaded:
-        if (document.querySelector(`script[data-webar-src="${src}"]`)) {
+        const loaded = document.querySelector(`script[data-webar-src="${src}"][data-webar-loaded="1"]`);
+        if (loaded) {
           resolve();
           return;
         }
 
+        // A previous attempt may have left a dead tag. Drop it so we can retry.
+        document.querySelectorAll(`script[data-webar-src="${src}"]`).forEach((node) => node.remove());
+
         const s = document.createElement('script');
         s.src = src;
         s.async = false; // preserve execution order
-        s.defer = true;
         s.dataset.webarSrc = src;
         s.onload = () => {
+          s.dataset.webarLoaded = '1';
           resolve();
         };
         s.onerror = () => {
+          s.remove();
           reject(new Error(`Failed to load script: ${src}`));
         };
         document.head.appendChild(s);
@@ -33,23 +37,45 @@ export default function ScriptLoader() {
     (async () => {
       try {
         console.log('WebAR: Starting script loading...');
-        // THREE + loaders:
-        await loadScript('/webar/libs/three/v136/build/three.min.js');
+        // UMD build. three.min.js is not in this project, and three.module.js
+        // does not attach THREE to window when loaded as a classic script.
+        await loadScript('/webar/libs/three/v136/build/three.js');
         console.log('WebAR: Three.js loaded');
         await loadScript('/webar/libs/three/v136/examples/js/loaders/GLTFLoader.js');
         await loadScript('/webar/libs/three/v136/examples/js/loaders/RGBELoader.js');
         await loadScript('/webar/libs/three/v136/examples/js/loaders/DRACOLoader.js');
         console.log('WebAR: Three.js loaders loaded');
 
-        // Postprocessing (used by helpers for TAA/bloom):
+        // CopyShader first. EffectComposer defines THREE.Pass and must run
+        // before ShaderPass and RenderPass, which extend it. The composer
+        // only needs ShaderPass when it is constructed, not when it loads.
+        await loadScript('/webar/libs/three/v136/examples/js/shaders/CopyShader.js');
+        await loadScript('/webar/libs/three/v136/examples/js/shaders/LuminosityHighPassShader.js');
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/EffectComposer.js');
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/ShaderPass.js');
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/RenderPass.js');
-        await loadScript('/webar/libs/three/v136/examples/js/shaders/CopyShader.js');
-        await loadScript('/webar/libs/three/v136/examples/js/shaders/LuminosityHighPassShader.js');
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/UnrealBloomPassTweaked.js');
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/SSAARenderPass.js');
         await loadScript('/webar/libs/three/v136/examples/js/postprocessing/TAARenderPass.js');
+
+        const THREE = (window as any).THREE;
+        const missing = [
+          ['THREE', THREE],
+          ['CopyShader', THREE?.CopyShader],
+          ['ShaderPass', THREE?.ShaderPass],
+          ['RenderPass', THREE?.RenderPass],
+          ['EffectComposer', THREE?.EffectComposer],
+          ['UnrealBloomPass', THREE?.UnrealBloomPass],
+          ['SSAARenderPass', THREE?.SSAARenderPass],
+          ['TAARenderPass', THREE?.TAARenderPass],
+          ['GLTFLoader', THREE?.GLTFLoader],
+          ['RGBELoader', THREE?.RGBELoader],
+          ['DRACOLoader', THREE?.DRACOLoader],
+        ].filter(([, value]) => !value).map(([name]) => name);
+
+        if (missing.length) {
+          throw new Error(`Postprocessing scripts loaded but missing: ${missing.join(', ')}`);
+        }
         console.log('WebAR: Three.js postprocessing loaded');
 
         // Common helpers:

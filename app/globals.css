@@ -75,12 +75,12 @@
    GLASSMORPHISM PRESET
    ═══════════════════════════════════════════════════════════════════════════ */
 .vto-glass {
-  background: var(--vto-bg-glass);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--vto-border-soft);
-  box-shadow: 0 10px 30px var(--vto-shadow-soft);
-  border-radius: 16px;
+  background: rgba(10, 10, 12, 0.62);
+  backdrop-filter: blur(22px) saturate(1.15);
+  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  border-radius: 24px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -124,7 +124,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 html,
@@ -141,6 +141,274 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Viewfinder fills the screen even after Three writes inline pixel sizes. */
+.vto-viewfinder {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover;
+}
+
+/* iOS 26 liquid glass control */
+.ios-glass {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 0.5px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Camera dock: one liquid-glass pill around the HUD */
+.vto-hud-dock {
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(28px) saturate(1.7);
+  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  border: 0.5px solid rgba(255, 255, 255, 0.32);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.45),
+    0 12px 40px rgba(0, 0, 0, 0.28);
+}
+
+/* Horizontal option strips. safe center keeps short rows centered and long rows scrollable from the start. */
+.vto-hud-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 10px), transparent);
+}
+.vto-hud-scroll::-webkit-scrollbar { display: none; }
+.vto-hud-track {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  align-items: center;
+  justify-content: safe center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.85rem;
+}
+.vto-hud-scroll button {
+  touch-action: pan-x;
+  scroll-snap-align: center;
+}
+
+/* Solid camera chrome. No blur, no translucent panels. */
+:root {
+  --ink: #161616;
+  --cream: #f3eee4;
+  --sun: #ffe14a;
+}
+
+.font-display { font-family: var(--font-display), sans-serif; }
+.font-label { font-family: var(--font-label), ui-monospace, monospace; }
+
+.vto-key {
+  background: var(--cream);
+  color: var(--ink);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 var(--sun);
+}
+.vto-key:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--sun);
+}
+
+.vto-rail {
+  background: var(--cream);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-right: 0;
+  border-radius: 22px 0 0 22px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+}
+.vto-rail::-webkit-scrollbar { display: none; }
+
+.vto-rail-item {
+  display: flex;
+  width: 76px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 11px 6px 9px;
+  color: var(--ink);
+  background: var(--cream);
+  border: 0;
+  border-top: 2px solid var(--ink);
+  cursor: pointer;
+}
+.vto-rail-item:first-child { border-top: 0; }
+.vto-rail-item[aria-pressed="true"] { background: var(--sun); }
+
+.vto-status {
+  background: var(--sun);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-family: var(--font-label), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.vto-tag {
+  background: var(--cream);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-family: var(--font-label), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.vto-dock {
+  background: #000;
+  color: var(--cream);
+  border-top: 2px solid var(--cream);
+}
+
+.vto-shutter {
+  display: flex;
+  width: 78px;
+  height: 78px;
+  padding: 5px;
+  border-radius: 999px;
+  border: 2px solid var(--cream);
+  background: #000;
+}
+.vto-shutter:active { transform: scale(0.96); }
+.vto-shutter-disc {
+  flex: 1;
+  border-radius: 999px;
+  background: var(--sun);
+}
+
+.vto-desk-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 2px solid #111111;
+  border-radius: 10px;
+  background: #f4efe3;
+  color: #111111;
+  box-shadow: 3px 3px 0 #ffc928;
+  cursor: pointer;
+}
+.vto-desk-key[aria-pressed="true"] { background: #ffc928; }
+.vto-desk-key:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #ffc928;
+}
+.vto-desk-wide {
+  width: auto;
+  height: 48px;
+  gap: 8px;
+  padding: 0 16px;
+  font-family: var(--font-label), ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.vto-desk-status {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border: 2px solid #111111;
+  border-radius: 6px;
+  background: #ffc928;
+  color: #111111;
+  font-family: var(--font-label), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+.vto-desk-count {
+  border: 2px solid #111111;
+  border-radius: 4px;
+  background: #f4efe3;
+  color: #111111;
+  padding: 4px 7px;
+  font-family: var(--font-label), ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+.vto-desk-rail {
+  position: absolute;
+  right: 0;
+  top: 200px;
+  width: 84px;
+  max-height: calc(100% - 340px);
+  background: #f4efe3;
+  border: 2px solid #111111;
+  border-right: 0;
+  border-radius: 16px 0 0 16px;
+  box-shadow: -4px 4px 0 #ffc928;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: none;
+}
+.vto-desk-rail::-webkit-scrollbar { display: none; }
+.vto-desk-rail-item {
+  display: flex;
+  width: 100%;
+  height: 78px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-top: 2px solid #111111;
+  background: transparent;
+  color: #111111;
+  padding: 0;
+  cursor: pointer;
+}
+.vto-desk-rail-item:first-child { border-top: 0; }
+.vto-desk-rail-item[aria-pressed="true"] { background: #ffc928; }
+.vto-desk-panel {
+  box-sizing: border-box;
+  flex: 0 0 380px;
+  width: 380px;
+  max-width: 420px;
+  height: calc(100svh - 40px);
+  max-height: 860px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 28px;
+  border: 2px solid #111111;
+  border-radius: 16px;
+  background: #f4efe3;
+  color: #111111;
+  box-shadow: 5px 5px 0 #ffc928;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* Capture moment — soft white flash (60ms) */
 @keyframes vto-capture-flash {

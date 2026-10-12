@@ -53,6 +53,7 @@ const WebARRocksFaceEarrings3DHelper = (function(){
 
     // postprocessing:
     taaLevel: 0,
+    bloom: null,
 
     // debug flag:
     debugOccluder: false
@@ -155,9 +156,13 @@ const WebARRocksFaceEarrings3DHelper = (function(){
       canvas: _spec.canvasThree,
       alpha: true,
       antialias: true,
+      premultipliedAlpha: false,
       preserveDrawingBuffer: true
     });
-    _three.renderer.setClearAlpha(0);
+    _three.renderer.outputEncoding = THREE.sRGBEncoding;
+    _three.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    _three.renderer.toneMappingExposure = 1.05;
+    _three.renderer.setClearColor(0x000000, 0);
 
     // init composer (for postprocessing):
     _three.composer = new THREE.EffectComposer( _three.renderer );
@@ -193,6 +198,12 @@ const WebARRocksFaceEarrings3DHelper = (function(){
       renderScenePass.enabled = false;
       const copyPass = new THREE.ShaderPass( THREE.CopyShader );
       _three.composer.addPass( copyPass );
+    }
+
+    if (_spec.bloom){
+      const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(_spec.canvasThree.width, _spec.canvasThree.height),
+        _spec.bloom.strength, _spec.bloom.radius, _spec.bloom.threshold);
+      _three.composer.addPass(bloomPass);
     }
 
     // init earrings and hide them:

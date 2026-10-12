@@ -24,6 +24,11 @@ export interface VtoProduct {
   modelOffset?: [number, number, number];
   /** Hand mode only: [x, y, z, w] quaternion */
   modelQuaternion?: [number, number, number, number];
+  /**
+   * When true, offset and quaternion are applied on the mesh.
+   * Existing watches and the ring already carry their placement in the file.
+   */
+  applyHandPlacement?: boolean;
 }
 
 export interface VtoCategory {

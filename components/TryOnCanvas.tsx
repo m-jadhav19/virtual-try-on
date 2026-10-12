@@ -4,6 +4,22 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState }
 
 export type Category = 'necklace' | 'earrings' | 'glasses' | 'hat' | 'ring' | 'watch';
 
+/**
+ * Supersample index into the jitter table. 2 → 4 samples.
+ * 3 (8 samples) softens thin frames and costs a full extra scene render per sample.
+ */
+const TAA_LEVEL = 2;
+
+/** Highlight-only bloom. Threshold stays high so skin and the camera feed do not glow. */
+const BLOOM_BY_CATEGORY: Record<Category, { strength: number; radius: number; threshold: number }> = {
+  glasses: { strength: 0.3, radius: 0.4, threshold: 0.85 },
+  earrings: { strength: 0.52, radius: 0.46, threshold: 0.66 },
+  necklace: { strength: 0.48, radius: 0.55, threshold: 0.7 },
+  hat: { strength: 0.14, radius: 0.32, threshold: 0.9 },
+  ring: { strength: 0.58, radius: 0.38, threshold: 0.68 },
+  watch: { strength: 0.36, radius: 0.42, threshold: 0.76 },
+};
+
 export type TrackingStatus = 'loading' | 'searching' | 'tracking' | 'error';
 
 export interface TransformOverrides {
@@ -21,6 +37,7 @@ export interface ModelConfig {
   modelScale?: number;
   modelOffset?: [number, number, number];
   modelQuaternion?: [number, number, number, number];
+  applyHandPlacement?: boolean;
 }
 
 interface Props {
@@ -56,6 +73,141 @@ export type TryOnCanvasHandle = {
 // Global Sequence Queue (Module Scope) - MUST be outside component to persist across renders
 let globalSequence = Promise.resolve();
 
+const DRACO_DECODER_PATH = '/webar/libs/three/v136/examples/js/libs/draco/';
+
+/** Head-worn models share the headphones demo pose, not the glasses net (that net has no ear/temple points these meshes were built on). */
+const HAT_SOLVE_PNP_POSITIONS = {
+  noseLeft: [21.86215, -0.121031, 67.803383],
+  noseRight: [-20.539499, 0.170727, 69.944778],
+  leftEyeExt: [44.507431, 34.942841, 38.750019],
+  rightEyeExt: [-44.064968, 35.39967, 39.36293],
+  leftEarTop: [89.165428, 16.312811, -49.06498],
+  leftEarBase: [78.738243, -6.04455, -23.17749],
+  leftEarBottom: [78.78685, -41.321789, -24.603769],
+  rightEarTop: [-88.488602, 17.2714, -48.199409],
+  rightEarBase: [-78.156998, -5.305619, -22.164619],
+  rightEarBottom: [-78.945511, -41.2551, -26.536131],
+  leftTemple: [60.26297, 83.790382, -13.54031],
+  rightTemple: [-60.03476, 83.584427, -13.24853],
+  foreHead: [-1.057755, 97.894547, 24.65494],
+};
+
+const HAT_SOLVE_PNP_LABELS = [
+  'foreHead',
+  'leftTemple',
+  'rightTemple',
+  'leftEarTop',
+  'rightEarTop',
+  'leftEyeExt',
+  'rightEyeExt',
+  'rightEarBottom',
+  'leftEarBottom',
+];
+
+function readViewCssSize(el: HTMLElement | null): { w: number; h: number } | null {
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return null;
+  return { w: rect.width, h: rect.height };
+}
+
+function viewPixelSize(css: { w: number; h: number }) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  return {
+    w: Math.max(2, Math.round(css.w * dpr)),
+    h: Math.max(2, Math.round(css.h * dpr)),
+  };
+}
+
+function handPlacementNeeded(cfg: ModelConfig | null | undefined) {
+  if (!cfg) return false;
+  if (cfg.applyHandPlacement) return true;
+  const offset = cfg.modelOffset;
+  const quat = cfg.modelQuaternion;
+  const moved = !!offset && (offset[0] !== 0 || offset[1] !== 0 || offset[2] !== 0);
+  const rotated = !!quat && !(quat[0] === 0 && quat[1] === 0 && quat[2] === 0 && Math.abs(quat[3]) === 1);
+  return moved || rotated;
+}
+
+function mountEarringPair(
+  three: any,
+  modelURL: string,
+  gen: number,
+  genRef: { current: number },
+  onError?: (error: Error) => void,
+) {
+  const dracoLoader = new window.THREE.DRACOLoader();
+  dracoLoader.setDecoderPath(DRACO_DECODER_PATH);
+  const loader = new window.THREE.GLTFLoader();
+  loader.setDRACOLoader(dracoLoader);
+  loader.load(
+    modelURL,
+    (gltf: any) => {
+      if (gen !== genRef.current) return;
+      const model = gltf.scene;
+      model.scale.multiplyScalar(100);
+      model.traverse((child: any) => {
+        if (child.isMesh) {
+          child.material.roughness = 0.0;
+          child.material.metalness = 1.0;
+        }
+      });
+      const clearModels = (node: any) => {
+        for (let i = node.children.length - 1; i >= 0; i--) {
+          if (node.children[i].userData?.isOccluder) continue;
+          node.remove(node.children[i]);
+        }
+      };
+      clearModels(three.earringRight);
+      clearModels(three.earringLeft);
+      three.earringRight.add(model);
+      three.earringLeft.add(model.clone());
+    },
+    undefined,
+    () => onError?.(new Error(`Failed to load model: ${modelURL}`)),
+  );
+}
+
+function mountHandAccessory(
+  modelURL: string,
+  cfg: ModelConfig | null | undefined,
+  gen: number,
+  genRef: { current: number },
+  handModelRef: { current: { mesh: any; baseScale: number; basePosition: [number, number, number]; baseQuaternion: [number, number, number, number] } | null },
+  onError?: (error: Error) => void,
+) {
+  const dracoLoader = new window.THREE.DRACOLoader();
+  dracoLoader.setDecoderPath(DRACO_DECODER_PATH);
+  const gltfLoader = new window.THREE.GLTFLoader();
+  gltfLoader.setDRACOLoader(dracoLoader);
+  gltfLoader.load(
+    modelURL,
+    (model: any) => {
+      if (gen !== genRef.current) return;
+      const me = model.scene.children[0];
+      if (handPlacementNeeded(cfg)) {
+        if (cfg?.modelOffset) {
+          me.position.add(new window.THREE.Vector3(cfg.modelOffset[0], cfg.modelOffset[1], cfg.modelOffset[2]));
+        }
+        if (cfg?.modelQuaternion) {
+          const q = cfg.modelQuaternion;
+          me.quaternion.set(q[0], q[2], -q[1], q[3]);
+        }
+      }
+      handModelRef.current = {
+        mesh: me,
+        baseScale: cfg?.modelScale ?? 1,
+        basePosition: [me.position.x, me.position.y, me.position.z],
+        baseQuaternion: [me.quaternion.x, me.quaternion.y, me.quaternion.z, me.quaternion.w],
+      };
+      window.HandTrackerThreeHelper.clear_threeObjects(false);
+      window.HandTrackerThreeHelper.add_threeObject(me);
+    },
+    undefined,
+    () => onError?.(new Error(`Failed to load model: ${modelURL}`)),
+  );
+}
+
 const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
   { category, onError, onStatusChange, transformOverrides, modelConfig }: Props,
   ref
@@ -71,6 +223,11 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
   // Keep latest callback in a ref so status updates never trigger re-init (avoid camera reset on "come closer" / "aligning")
   const onStatusChangeRef = useRef(onStatusChange);
   onStatusChangeRef.current = onStatusChange;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+  const sessionRef = useRef<{ category: Category; path: string; earrings?: any } | null>(null);
+  const loadGenRef = useRef(0);
+  const resizeTrackerRef = useRef<((cssW: number, cssH: number) => void) | null>(null);
 
   const updateStatus = (status: TrackingStatus, text: string) => {
     setLoadingText(text);
@@ -94,12 +251,7 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
             return new Promise((resolve) => {
               window.WebARRocksMirror.capture_image((cv: HTMLCanvasElement) => {
                 if (cv) {
-                  const dataURL = cv.toDataURL('image/png');
-                  const win = window.open('');
-                  if (win) {
-                    win.document.write(`<img src="${dataURL}" style="max-width:100%;height:auto;" />`);
-                  }
-                  resolve(dataURL);
+                  resolve(cv.toDataURL('image/png'));
                 } else {
                   resolve('');
                 }
@@ -133,14 +285,10 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           }
 
           const dataURL = out.toDataURL('image/png');
-          const win = window.open('');
-          if (win) {
-            win.document.write(`<img src="${dataURL}" style="max-width:100%;height:auto;" />`);
-          }
           return Promise.resolve(dataURL);
         } catch (e: any) {
           console.error("Capture error:", e);
-          onError?.(e);
+          onErrorRef.current?.(e);
           return Promise.reject(e);
         }
       },
@@ -162,7 +310,7 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           setIsPaused(true);
           updateStatus('searching', 'Paused');
         } catch (e: any) {
-          onError?.(e);
+          onErrorRef.current?.(e);
         }
       },
       resume: async () => {
@@ -181,7 +329,7 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           setIsPaused(false);
           updateStatus('tracking', isHandMode ? 'Tracking Hand' : 'Tracking Face');
         } catch (e: any) {
-          onError?.(e);
+          onErrorRef.current?.(e);
         }
       },
       flipCamera: async () => {
@@ -191,11 +339,11 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           // Re-init will happen via effect dependency (cameraMode)
           updateStatus('loading', 'Flipping camera...');
         } catch (e: any) {
-          onError?.(e);
+          onErrorRef.current?.(e);
         }
       }
     }),
-    [cameraMode, isHandMode, onError]
+    [cameraMode, isHandMode]
   );
 
   // Global queue to serialize all WebAR operations strictly
@@ -212,7 +360,12 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
       return new Promise<void>((resolve, reject) => {
         const start = Date.now();
         const tick = () => {
-          if (!isMounted) return;
+          if (!isMounted) {
+            if (pollTimer !== null) window.clearInterval(pollTimer);
+            pollTimer = null;
+            resolve();
+            return;
+          }
           try {
             if (predicate()) {
               if (pollTimer !== null) window.clearInterval(pollTimer);
@@ -324,9 +477,11 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           };
           break;
         case 'hat':
-          // Use full-face NN (same as glasses) so default solve PnP labels (e.g. chin) exist.
-          // NN_HEADPHONESL_2 does not have "chin" and would throw in WebARRocksFaceThreeHelper.
-          nnPath = '/webar/neuralNets/NN_GLASSES_9.json';
+          // Headphones net + the hat demo's ear/temple points. The glasses net
+          // solves a different pose, so caps, headphones, and helmets sit on the face.
+          nnPath = '/webar/neuralNets/NN_HEADPHONESL_2.json';
+          solvePnPObjPointsPositions = HAT_SOLVE_PNP_POSITIONS;
+          solvePnPImgPointsLabels = HAT_SOLVE_PNP_LABELS;
           if (!modelConfig?.modelPath) {
             modelURL = '/webar/assets/hat/models3D/hatDraco.glb';
             occluderURL = '/webar/assets/hat/models3D/occluder.glb';
@@ -348,11 +503,16 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
       }
 
       try {
+        const gen = ++loadGenRef.current;
+        const view = readViewCssSize(canvasFaceRef.current) ?? {
+          w: window.innerWidth,
+          h: window.innerHeight,
+        };
         const initConfig: any = {
           canvasFace: canvasFaceRef.current,
           canvasThree: canvasThreeRef.current,
-          width: window.innerWidth,
-          height: window.innerHeight,
+          width: view.w,
+          height: view.h,
           videoSettings: { facingMode: cameraMode },
           specWebARRocksFace: {
             NNCPath: nnPath,
@@ -365,7 +525,8 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           occluderURL,
           pointLightIntensity: 0.8,
           pointLightY: 200,
-          taaLevel: 3,
+          taaLevel: TAA_LEVEL,
+          bloom: BLOOM_BY_CATEGORY[category],
           landmarksStabilizerSpec,
           debugOccluder: false,
           isGlasses: category === 'glasses',
@@ -382,29 +543,42 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
 
         await window.WebARRocksMirror.init(initConfig);
 
-        if (isMounted) {
+        if (isMounted && gen === loadGenRef.current) {
+          sessionRef.current = { category, path: modelURL };
           setIsLoaded(true);
           setIsPaused(false);
-          window.WebARRocksMirror.resize(window.innerWidth, window.innerHeight);
+          resizeTrackerRef.current = (cssW, cssH) => {
+            window.WebARRocksMirror?.resize(cssW, cssH);
+          };
+          window.WebARRocksMirror.resize(view.w, view.h);
           updateStatus('tracking', 'Tracking Face');
         }
       } catch (err: any) {
         if (isMounted) {
-          onError?.(err);
+          onErrorRef.current?.(err);
           updateStatus('error', err.message);
         }
       }
     };
 
     const startEarrings = async () => {
-      // ... (Logic kept roughly same, just consolidated inside queue execution)
+      const gen = ++loadGenRef.current;
       try {
+        const view = readViewCssSize(canvasFaceRef.current);
+        if (view && canvasFaceRef.current && canvasThreeRef.current) {
+          const px = viewPixelSize(view);
+          canvasFaceRef.current.width = px.w;
+          canvasFaceRef.current.height = px.h;
+          canvasThreeRef.current.width = px.w;
+          canvasThreeRef.current.height = px.h;
+        }
         const three = await window.WebARRocksFaceEarrings3DHelper.init({
           NN: '/webar/neuralNets/NN_EARS_4.json',
           canvasFace: canvasFaceRef.current,
           canvasThree: canvasThreeRef.current,
           debugOccluder: false,
-          taaLevel: 3
+          taaLevel: TAA_LEVEL,
+          bloom: BLOOM_BY_CATEGORY.earrings
         });
         threeInstance = three;
 
@@ -419,32 +593,9 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           });
 
         const earringsModel = modelConfig?.modelPath ?? '/webar/assets/earrings/earringsSimple.glb';
-        const dracoLoader = new (window as any).THREE.DRACOLoader();
-        dracoLoader.setDecoderPath('/webar/libs/three/v136/examples/js/libs/draco/');
-        const loader = new (window as any).THREE.GLTFLoader();
-        loader.setDRACOLoader(dracoLoader);
-
-        loader.load(
-          earringsModel,
-          (gltf: any) => {
-            const model = gltf.scene;
-            model.scale.multiplyScalar(100);
-            model.traverse((child: any) => {
-              if (child.isMesh) {
-                child.material.roughness = 0.0;
-                child.material.metalness = 1.0;
-              }
-            });
-            three.earringRight.add(model);
-            three.earringLeft.add(model.clone());
-            console.log('WebAR: Loaded earring model:', earringsModel);
-          },
-          undefined,
-          (err: any) => {
-            console.error('WebAR: Failed to load earring model:', earringsModel, err);
-            onError?.(new Error(`Failed to load model: ${earringsModel}`));
-          }
-        );
+        if (!isMounted || gen !== loadGenRef.current) return;
+        sessionRef.current = { category: 'earrings', path: earringsModel, earrings: three };
+        mountEarringPair(three, earringsModel, gen, loadGenRef, (error) => onErrorRef.current?.(error));
 
         const cylinderRadius = 2;
         const cylinderHeight = 0.5;
@@ -457,15 +608,23 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
         occluderGeom.applyMatrix4(matrix);
 
         window.WebARRocksFaceEarrings3DHelper.add_threeEarsOccluders(occluderGeom);
+        const markOccluders = (node: any) => {
+          node?.children?.forEach((child: any) => {
+            if (child.material && child.material.colorWrite === false) child.userData.isOccluder = true;
+          });
+        };
+        markOccluders(three.earringRight);
+        markOccluders(three.earringLeft);
 
-        window.WebARRocksResizer.size_canvas({
-          canvas: canvasFaceRef.current,
-          overlayCanvas: [canvasThreeRef.current],
-          callback: () => { },
-          onResize: window.WebARRocksFaceEarrings3DHelper.resize
-        });
+        const syncEarrings = (cssW: number, cssH: number) => {
+          const px = viewPixelSize({ w: cssW, h: cssH });
+          window.WebARRocksFaceEarrings3DHelper?.resize(px.w, px.h);
+        };
+        resizeTrackerRef.current = syncEarrings;
+        const sized = readViewCssSize(canvasFaceRef.current);
+        if (sized) syncEarrings(sized.w, sized.h);
 
-        if (isMounted) {
+        if (isMounted && gen === loadGenRef.current) {
           setIsLoaded(true);
           setIsPaused(false);
           updateStatus('tracking', 'Tracking Face');
@@ -473,7 +632,7 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
 
       } catch (e: any) {
         if (isMounted) {
-          onError?.(e);
+          onErrorRef.current?.(e);
           updateStatus('error', e.message);
         }
       }
@@ -524,6 +683,7 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
         poseLandmarksLabels = ["wristBack", "wristLeft", "wristRight", "wristPalm", "wristPalmTop", "wristBackTop", "wristRightBottom", "wristLeftBottom"];
       }
 
+      const gen = ++loadGenRef.current;
       try {
         const three = await window.HandTrackerThreeHelper.init({
           handTrackerCanvas: canvasFaceRef.current,
@@ -537,6 +697,8 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
             minCutOff: 0.001,
             beta: category === 'ring' ? 30 : 5
           },
+          taaLevel: TAA_LEVEL,
+          bloom: BLOOM_BY_CATEGORY[category],
           videoSettings: {
             facingMode: cameraMode
           }
@@ -569,34 +731,37 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
           );
         }
 
-        gltfLoader.load(
+        mountHandAccessory(
           modelURL,
-          (model: any) => {
-            const me = model.scene.children[0];
-            handModelRef.current = {
-              mesh: me,
-              baseScale: modelScale,
-              basePosition: [me.position.x, me.position.y, me.position.z],
-              baseQuaternion: [me.quaternion.x, me.quaternion.y, me.quaternion.z, me.quaternion.w],
-            };
-            window.HandTrackerThreeHelper.add_threeObject(me);
-            console.log('WebAR: Loaded hand model:', modelURL);
+          {
+            modelPath: modelURL,
+            modelScale,
+            modelOffset: modelOffset as [number, number, number],
+            modelQuaternion: modelQuaternion as [number, number, number, number],
+            applyHandPlacement: modelConfig?.applyHandPlacement,
           },
-          undefined,
-          (err: any) => {
-            console.error('WebAR: Failed to load hand model:', modelURL, err);
-            onError?.(new Error(`Failed to load model: ${modelURL}`));
-          }
+          gen,
+          loadGenRef,
+          handModelRef,
+          (error) => onErrorRef.current?.(error),
         );
 
-        if (isMounted) {
+        if (isMounted && gen === loadGenRef.current) {
+          sessionRef.current = { category, path: modelURL };
           setIsLoaded(true);
           setIsPaused(false);
+          const syncHand = (cssW: number, cssH: number) => {
+            const px = viewPixelSize({ w: cssW, h: cssH });
+            window.HandTrackerThreeHelper?.resize(px.w, px.h);
+          };
+          resizeTrackerRef.current = syncHand;
+          const sized = readViewCssSize(canvasFaceRef.current);
+          if (sized) syncHand(sized.w, sized.h);
           updateStatus('tracking', category === 'ring' ? 'Tracking Ring' : 'Tracking Watch');
         }
       } catch (e: any) {
         if (isMounted) {
-          onError?.(e);
+          onErrorRef.current?.(e);
           updateStatus('error', e.message);
         }
       }
@@ -639,7 +804,7 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
       } catch (e: any) {
         if (isMounted) {
           updateStatus('error', `Start failed: ${e.message}`);
-          onError?.(e);
+          onErrorRef.current?.(e);
         }
       }
     });
@@ -647,6 +812,9 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
     return () => {
       isMounted = false;
       handModelRef.current = null;
+      sessionRef.current = null;
+      resizeTrackerRef.current = null;
+      loadGenRef.current += 1;
       if (pollTimer) clearInterval(pollTimer);
 
       enqueue(async () => {
@@ -660,7 +828,29 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
     };
     // Intentionally exclude modelConfig?.modelPath: changing product (same category) must not
     // tear down and re-init the camera, which would cause a visible reset/flicker.
-  }, [category, cameraMode, isHandMode, onError]);
+  }, [category, cameraMode, isHandMode]);
+
+  useEffect(() => {
+    const path = modelConfig?.modelPath;
+    const session = sessionRef.current;
+    if (!path || !isLoaded || !session) return;
+    if (session.category !== category || session.path === path) return;
+
+    const gen = ++loadGenRef.current;
+    session.path = path;
+
+    if (category === 'glasses' || category === 'necklace' || category === 'hat') {
+      window.WebARRocksMirror?.load(path);
+      return;
+    }
+    if (category === 'earrings' && session.earrings) {
+      mountEarringPair(session.earrings, path, gen, loadGenRef, (error) => onErrorRef.current?.(error));
+      return;
+    }
+    if (category === 'ring' || category === 'watch') {
+      mountHandAccessory(path, modelConfig, gen, loadGenRef, handModelRef, (error) => onErrorRef.current?.(error));
+    }
+  }, [modelConfig?.modelPath, category, isLoaded]);
 
   // Apply transform overrides to hand model every frame so they persist over SDK updates
   useEffect(() => {
@@ -698,42 +888,39 @@ const TryOnCanvas = forwardRef<TryOnCanvasHandle, Props>(function TryOnCanvas(
     return () => cancelAnimationFrame(rafId);
   }, [isHandMode, transformOverrides?.scale, transformOverrides?.height, transformOverrides?.rotation, transformOverrides?.depth]);
 
+  useEffect(() => {
+    const el = canvasFaceRef.current?.parentElement;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      const size = readViewCssSize(el);
+      if (!size) return;
+      resizeTrackerRef.current?.(size.w, size.h);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div className="absolute inset-0">
       <canvas
         ref={canvasFaceRef}
+        className="vto-viewfinder"
         style={{
-          position: 'absolute',
-          top: 0,
-          left: '50%',
-          transform: (isHandMode || cameraMode === 'environment')
-            ? 'translate(-50%)'
-            : 'translate(-50%) rotateY(180deg)',
-          height: '100%',
+          transform: (isHandMode || cameraMode === 'environment') ? 'none' : 'scaleX(-1)',
           zIndex: 0,
         }}
-        id='WebARRocksFaceCanvas'
+        id="WebARRocksFaceCanvas"
       />
       <canvas
         ref={canvasThreeRef}
+        className="vto-viewfinder"
         style={{
-          position: 'absolute',
-          top: 0,
-          left: '50%',
-          transform: (isHandMode || cameraMode === 'environment')
-            ? 'translate(-50%)'
-            : 'translate(-50%) rotateY(180deg)',
-          height: '100%',
+          transform: (isHandMode || cameraMode === 'environment') ? 'none' : 'scaleX(-1)',
           zIndex: 1,
-          pointerEvents: 'none'
+          pointerEvents: 'none',
         }}
-        id='threeCanvas'
+        id="threeCanvas"
       />
-
-      {/* 
-          REMOVED OLD DEBUG OVERLAY 
-          The status is now lifted up via onStatusChange
-      */}
     </div>
   );
 });

@@ -184,7 +184,10 @@ const WebARRocksMirror = (function(){
   }
   
 
+  let _faceAccessoryLoadId = 0;
+
   function load_faceAccessory(modelURL, callback){
+    const loadId = ++_faceAccessoryLoadId;
     if (!modelURL){
       remove_faceAccessory();
       if (callback) callback(null);
@@ -199,6 +202,7 @@ const WebARRocksMirror = (function(){
     }
 
     gltfLoader.load(modelURL, function(model){
+      if (loadId !== _faceAccessoryLoadId) return;
       const threeFaceAccessory = model.scene.clone();
 
       tweak_faceAccessory(threeFaceAccessory);
@@ -245,6 +249,7 @@ const WebARRocksMirror = (function(){
 
     // improve WebGLRenderer settings:
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
     renderer.outputEncoding = THREE.sRGBEncoding;
 
     // load envmap if necessary:

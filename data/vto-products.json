@@ -13,6 +13,14 @@
           "occluderPath": "/webar/assets/glasses/models3D/occluder.glb",
           "envmapPath": "/webar/assets/glasses/envmaps/venice_sunset_1k.hdr",
           "thumbnail": ""
+        },
+        {
+          "id": "glasses2",
+          "name": "Bold Frame",
+          "modelPath": "/webar/assets/glasses/models3D/glasses2.glb",
+          "occluderPath": "/webar/assets/glasses/models3D/occluder.glb",
+          "envmapPath": "/webar/assets/glasses/envmaps/venice_sunset_1k.hdr",
+          "thumbnail": ""
         }
       ]
     },
@@ -63,6 +71,14 @@
           "id": "necklace-egyptian",
           "name": "Egyptian Necklace",
           "modelPath": "/webar/assets/necklace/models3D/egyptian_necklace.glb",
+          "occluderPath": "/webar/assets/necklace/models3D/occluder.glb",
+          "envmapPath": "/webar/assets/necklace/envmaps/venice_sunset_1k.hdr",
+          "thumbnail": ""
+        },
+        {
+          "id": "necklace-native",
+          "name": "Heritage Collar",
+          "modelPath": "/webar/assets/necklace/models3D/nativeAmerican.glb",
           "occluderPath": "/webar/assets/necklace/models3D/occluder.glb",
           "envmapPath": "/webar/assets/necklace/envmaps/venice_sunset_1k.hdr",
           "thumbnail": ""
@@ -122,6 +138,17 @@
           "modelScale": 1.9737,
           "modelOffset": [0, 0, 0],
           "modelQuaternion": [0, 0, 0, 1]
+        },
+        {
+          "id": "watch-band",
+          "name": "Sport Band",
+          "modelPath": "/webar/assets/watch/wristPlaceHolder2.glb",
+          "occluderPath": "/webar/assets/watch/wristOccluder.glb",
+          "thumbnail": "",
+          "modelScale": 1.9737,
+          "modelOffset": [0.076, -0.916, -0.504],
+          "modelQuaternion": [0, 0, 0, 1],
+          "applyHandPlacement": true
         }
       ]
     },
@@ -135,6 +162,22 @@
           "id": "hat-draco",
           "name": "Classic Cap",
           "modelPath": "/webar/assets/hat/models3D/hatDraco.glb",
+          "occluderPath": "/webar/assets/hat/models3D/occluder.glb",
+          "envmapPath": "/webar/assets/hat/envmaps/venice_sunset_512.hdr",
+          "thumbnail": ""
+        },
+        {
+          "id": "hat-headphones",
+          "name": "Headphones",
+          "modelPath": "/webar/assets/hat/models3D/headphones.glb",
+          "occluderPath": "/webar/assets/hat/models3D/occluder.glb",
+          "envmapPath": "/webar/assets/hat/envmaps/venice_sunset_512.hdr",
+          "thumbnail": ""
+        },
+        {
+          "id": "hat-moto",
+          "name": "Moto Helmet",
+          "modelPath": "/webar/assets/hat/models3D/motorcycleHelmet.glb",
           "occluderPath": "/webar/assets/hat/models3D/occluder.glb",
           "envmapPath": "/webar/assets/hat/envmaps/venice_sunset_512.hdr",
           "thumbnail": ""

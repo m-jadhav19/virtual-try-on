@@ -10,11 +10,11 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--vto-accent-primary)] text-[var(--vto-bg-primary)] hover:bg-[var(--vto-accent-primary-hover)] hover:scale-[1.03] hover:shadow-[0_0_12px_var(--vto-glow-primary)] active:scale-[0.97] active:shadow-[0_0_18px_var(--vto-glow-primary)]",
+          "bg-white text-black hover:bg-white/90 active:scale-[0.98]",
         secondary:
-          "bg-transparent text-[var(--vto-accent-secondary)] border border-[var(--vto-border-soft)] hover:bg-[var(--vto-accent-secondary)]/10 hover:text-[var(--vto-accent-secondary-hover)] hover:shadow-[0_0_12px_var(--vto-glow-cyan)]",
+          "bg-transparent text-white/80 border border-white/15 hover:bg-white/10 hover:text-white",
         emotional:
-          "bg-[var(--vto-accent-rose)] text-white hover:bg-[var(--vto-accent-rose-hover)] hover:scale-[1.03] hover:shadow-[0_0_12px_var(--vto-glow-rose)] active:scale-[0.97]",
+          "bg-white text-black hover:bg-white/90 active:scale-[0.98]",
         outline:
           "border border-[var(--vto-border-soft)] bg-transparent text-[var(--foreground)] hover:bg-[var(--vto-bg-glass)] hover:border-[var(--vto-border-soft)]",
         ghost:

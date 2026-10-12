@@ -299,9 +299,13 @@ const WebARRocksFaceThreeHelper = (function(){
       canvas: _three.canvas,
       alpha: true,
       antialias: true,
+      premultipliedAlpha: false,
       preserveDrawingBuffer: true
     });
-    _three.renderer.setClearAlpha(0);
+    _three.renderer.outputEncoding = THREE.sRGBEncoding;
+    _three.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    _three.renderer.toneMappingExposure = 1.05;
+    _three.renderer.setClearColor(0x000000, 0);
     
     _three.scene = new THREE.Scene();
     _three.camera = new THREE.PerspectiveCamera(_cameraFoVY, that.get_viewAspectRatio(), 10, 5000);

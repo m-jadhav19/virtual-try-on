@@ -56,7 +56,8 @@
 			const highPassShader = THREE.LuminosityHighPassShader;
 			this.highPassUniforms = THREE.UniformsUtils.clone( highPassShader.uniforms );
 			this.highPassUniforms[ 'luminosityThreshold' ].value = threshold;
-			this.highPassUniforms[ 'smoothWidth' ].value = 0.01;
+			// Wider knee so specular highlights bloom instead of popping on and off.
+			this.highPassUniforms[ 'smoothWidth' ].value = 0.18;
 			this.materialHighPassFilter = new THREE.ShaderMaterial( {
 				uniforms: this.highPassUniforms,
 				vertexShader: highPassShader.vertexShader,
@@ -88,7 +89,9 @@
 			this.compositeMaterial.uniforms[ 'bloomStrength' ].value = strength;
 			this.compositeMaterial.uniforms[ 'bloomRadius' ].value = 0.1;
 			this.compositeMaterial.needsUpdate = true;
-			const bloomFactors = [ 1.0, 0.8, 0.6, 0.4, 0.2 ];
+			// Tight mips stay strong; wide mips stay weak so jewelry sparkles
+			// instead of fogging the whole camera frame.
+			const bloomFactors = [ 1.0, 0.65, 0.32, 0.12, 0.04 ];
 			this.compositeMaterial.uniforms[ 'bloomFactors' ].value = bloomFactors;
 			this.bloomTintColors = [ new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ) ];
 			this.compositeMaterial.uniforms[ 'bloomTintColors' ].value = this.bloomTintColors; // copy material
@@ -106,16 +109,31 @@
 				uniforms: this.copyUniforms,
 				vertexShader: copyShader.vertexShader,
 				fragmentShader: copyShader.fragmentShader,
-				blending: THREE.AdditiveBlending,
+				// Add light onto the jewelry, but leave the canvas alpha alone.
+				// AdditiveBlending also adds alpha and paints a dark veil over the video.
+				blending: THREE.CustomBlending,
+				blendEquation: THREE.AddEquation,
+				blendSrc: THREE.SrcAlphaFactor,
+				blendDst: THREE.OneFactor,
+				blendEquationAlpha: THREE.AddEquation,
+				blendSrcAlpha: THREE.ZeroFactor,
+				blendDstAlpha: THREE.OneFactor,
 				depthTest: false,
 				depthWrite: false,
-				transparent: true
+				transparent: true,
+				premultipliedAlpha: false,
+				toneMapped: false
 			} );
 			this.enabled = true;
 			this.needsSwap = false;
 			this._oldClearColor = new THREE.Color();
 			this.oldClearAlpha = 1;
 			this.basic = new THREE.MeshBasicMaterial();
+			// Beauty pass is already tone-mapped and sRGB. Don't do it again.
+			this.basic.toneMapped = false;
+			this.basic.premultipliedAlpha = false;
+			this.basic.depthTest = false;
+			this.basic.depthWrite = false;
 			this.fsQuad = new THREE.FullScreenQuad( null );
 
 		}
@@ -265,23 +283,29 @@
 				float gaussianPdf(in float x, in float sigma) {
 					return 0.39894 * exp( -0.5 * x * x/( sigma * sigma))/sigma;
 				}
+				vec4 premultiply(vec4 c) {
+					return vec4(c.rgb * c.a, c.a);
+				}
 				void main() {
 					vec2 invSize = 1.0 / texSize;
           float fSigma = float(SIGMA);
           float weightSum = gaussianPdf(0.0, fSigma);
-          vec4 color = texture2D( colorTexture, vUv);
+          vec4 color = premultiply(texture2D(colorTexture, vUv));
           vec4 diffuseSum = color * weightSum;
           for( int i = 1; i < KERNEL_RADIUS; i ++ ) {
             float x = float(i);
             float w = gaussianPdf(x, fSigma);
             vec2 uvOffset = direction * invSize * x;
-            vec4 sample1 = texture2D( colorTexture, vUv + uvOffset);
-            vec4 sample2 = texture2D( colorTexture, vUv - uvOffset);
+            vec4 sample1 = premultiply(texture2D(colorTexture, vUv + uvOffset));
+            vec4 sample2 = premultiply(texture2D(colorTexture, vUv - uvOffset));
             diffuseSum += (sample1 + sample2) * w;
             weightSum += 2.0 * w;
-          }\
-          gl_FragColor = diffuseSum / weightSum;
-				}` // <- TWEAKED BY WEBAR.ROCKS TO PRESERVE TRANSPARENCY (just the alpha channel of gl_FragColor)
+          }
+          vec4 blurred = diffuseSum / weightSum;
+          float a = blurred.a;
+          vec3 rgb = a > 0.0001 ? blurred.rgb / a : vec3(0.0);
+          gl_FragColor = vec4(rgb, a);
+				}` // Premultiply before blur so transparent black does not dirty highlights, then restore straight alpha.
 			} );
 
 		}

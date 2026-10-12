@@ -11,7 +11,10 @@
 				const parameters = {
 					minFilter: THREE.LinearFilter,
 					magFilter: THREE.LinearFilter,
-					format: THREE.RGBAFormat
+					format: THREE.RGBAFormat,
+					// sRGB so MeshStandardMaterial encodes once into the buffer.
+					// The copy/bloom passes then display those values as-is.
+					encoding: THREE.sRGBEncoding
 				};
 				const size = renderer.getSize( new THREE.Vector2() );
 				this._pixelRatio = renderer.getPixelRatio();
